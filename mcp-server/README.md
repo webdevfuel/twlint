@@ -11,17 +11,27 @@ If you just want to get up and running quickly:
 git clone https://github.com/yourusername/twlint.git
 cd twlint/mcp-server
 
-# Install using uv
+# Option 1: Install the package (recommended)
 uv pip install -e .
 
-# Add to Claude Desktop config
-# macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+# Add to Claude Desktop config for installed package:
 {
   "mcpServers": {
     "twlint": {
       "command": "uv",
       "args": ["run", "twlint-mcp"],
       "cwd": "/absolute/path/to/twlint/mcp-server"
+    }
+  }
+}
+
+# Option 2: Run directly without installing
+# Add to Claude Desktop config for direct execution:
+{
+  "mcpServers": {
+    "twlint": {
+      "command": "uv",
+      "args": ["run", "/absolute/path/to/twlint/mcp-server/server.py"]
     }
   }
 }

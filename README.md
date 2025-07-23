@@ -125,6 +125,19 @@ Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_deskt
   "mcpServers": {
     "twlint": {
       "command": "uv",
+      "args": ["run", "/path/to/twlint/mcp-server/server.py"]
+    }
+  }
+}
+```
+
+Or if you've installed the package with `uv pip install -e .`:
+
+```json
+{
+  "mcpServers": {
+    "twlint": {
+      "command": "uv",
       "args": ["run", "twlint-mcp"],
       "cwd": "/path/to/twlint/mcp-server"
     }
