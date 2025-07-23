@@ -1,0 +1,22 @@
+[project]
+name = "twlint-mcp"
+version = "1.0.0"
+description = "MCP server for linting and validating Tailwind CSS classes"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [{name = "Your Name"}]
+keywords = ["mcp", "tailwindcss", "validation", "linter"]
+dependencies = [
+    "mcp>=1.1.0",
+]
+
+[project.scripts]
+twlint-mcp = "server:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["server", "test_server"]

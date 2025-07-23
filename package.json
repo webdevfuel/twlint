@@ -1,0 +1,54 @@
+{
+  "name": "twlint",
+  "version": "1.0.0",
+  "description": "Lint and validate Tailwind CSS classes in your codebase",
+  "keywords": [
+    "tailwindcss",
+    "tailwind",
+    "css",
+    "validation",
+    "linter",
+    "cli",
+    "mcp",
+    "scanner"
+  ],
+  "homepage": "https://github.com/yourusername/twlint#readme",
+  "bugs": {
+    "url": "https://github.com/yourusername/twlint/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/twlint.git"
+  },
+  "license": "MIT",
+  "author": "Your Name",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "twlint": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node test/run-tests.js",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "@tailwindcss/oxide": "^4.1.11",
+    "tailwindcss": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
