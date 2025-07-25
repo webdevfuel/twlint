@@ -1,5 +1,5 @@
 {
-  "name": "twlint",
+  "name": "@webdevfuel/twlint",
   "version": "1.0.0",
   "description": "Lint and validate Tailwind CSS classes in your codebase",
   "keywords": [
@@ -12,13 +12,13 @@
     "mcp",
     "scanner"
   ],
-  "homepage": "https://github.com/yourusername/twlint#readme",
+  "homepage": "https://github.com/webdevfuel/twlint#readme",
   "bugs": {
-    "url": "https://github.com/yourusername/twlint/issues"
+    "url": "https://github.com/webdevfuel/twlint/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/twlint.git"
+    "url": "git+https://github.com/webdevfuel/twlint.git"
   },
   "license": "MIT",
   "author": "Your Name",

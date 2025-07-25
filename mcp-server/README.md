@@ -8,7 +8,7 @@ If you just want to get up and running quickly:
 
 ```bash
 # Clone the repository (if you haven't already)
-git clone https://github.com/yourusername/twlint.git
+git clone https://github.com/webdevfuel/twlint.git
 cd twlint/mcp-server
 
 # Option 1: Install the package (recommended)

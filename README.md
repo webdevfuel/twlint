@@ -15,13 +15,13 @@ A powerful linter for Tailwind CSS that scans your codebase and identifies inval
 ## Installation
 
 ```bash
-npm install -g twlint
+npm install -g @webdevfuel/twlint
 ```
 
 Or use it directly with npx:
 
 ```bash
-npx twlint --path ./src/styles.css ./src/**/*.tsx
+npx @webdevfuel/twlint --path ./src/styles.css ./src/**/*.tsx
 ```
 
 ## CLI Usage
@@ -218,7 +218,7 @@ The scanner supports common utility functions like `cn()`, `clsx()`, and `classN
 You can also use this as a library:
 
 ```typescript
-import { scanFiles } from 'twlint'
+import { scanFiles } from '@webdevfuel/twlint'
 
 const result = await scanFiles(['./src/**/*.tsx'], {
   cssPath: './src/styles.css'
@@ -287,7 +287,7 @@ Example output:
 You can also use this as a library in your own projects:
 
 ```javascript
-import { scanFiles } from 'twlint'
+import { scanFiles } from '@webdevfuel/twlint'
 
 const result = await scanFiles(['./src/**/*.tsx'], {
   cssPath: './src/styles.css'
