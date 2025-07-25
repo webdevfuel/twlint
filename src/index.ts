@@ -256,6 +256,246 @@ export async function findInvalidTailwindClasses(
   }
 }
 
+export interface ClassLocation {
+  line: number
+  column: number
+  context?: string
+}
+
+export interface FileClassCount {
+  file: string
+  count: number
+  locations?: ClassLocation[]
+}
+
+export interface CountResult {
+  className: string
+  totalCount: number
+  fileCount: number
+  isValidClass: boolean
+  byFile: FileClassCount[]
+}
+
+export async function countClassOccurrences(
+  filePaths: string | string[],
+  className: string,
+  options: ScanOptions = {}
+): Promise<CountResult> {
+  // First check if the class is valid
+  const validationResult = await findInvalidTailwindClasses([''], {
+    ...options,
+    sources: [{
+      base: '.',
+      pattern: '/dev/null',
+      negated: false
+    }]
+  })
+
+  // Load design system to validate the specific class
+  let cssContent = options.cssContent
+  if (!cssContent && options.cssPath) {
+    cssContent = readFileSync(options.cssPath, 'utf-8')
+  }
+  if (!cssContent) {
+    cssContent = '@import "tailwindcss";'
+  }
+
+  // Get the path to the actual TailwindCSS files
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = dirname(__filename)
+  
+  let tailwindContent = ''
+  const possiblePaths = [
+    resolve(__dirname, '../node_modules/tailwindcss/index.css'),
+    resolve(__dirname, '../../node_modules/tailwindcss/index.css'),
+    resolve(process.cwd(), 'node_modules/tailwindcss/index.css')
+  ]
+  
+  for (const path of possiblePaths) {
+    try {
+      tailwindContent = readFileSync(path, 'utf-8')
+      break
+    } catch (e) {
+      // Continue to next path
+    }
+  }
+
+  // Define loader functions for TailwindCSS v4
+  const compileOptions = {
+    loadStylesheet: async (id: string, base: string) => {
+      if (id === 'tailwindcss') {
+        return {
+          path: id,
+          base: base || '.',
+          content: tailwindContent || '@theme{}'
+        }
+      }
+      return {
+        path: id,
+        base: base || '.',
+        content: ''
+      }
+    },
+    loadModule: async (id: string, base: string, resourceHint: 'plugin' | 'config' = 'plugin') => {
+      const requireFromBase = createRequire(join(base || process.cwd(), 'package.json'))
+      
+      try {
+        let resolvedPath: string
+        try {
+          resolvedPath = requireFromBase.resolve(id)
+        } catch (e) {
+          const requireFromCwd = createRequire(join(process.cwd(), 'package.json'))
+          try {
+            resolvedPath = requireFromCwd.resolve(id)
+          } catch (e2) {
+            if (options.cssPath) {
+              const requireFromCss = createRequire(join(dirname(resolve(options.cssPath)), 'package.json'))
+              resolvedPath = requireFromCss.resolve(id)
+            } else {
+              throw e2
+            }
+          }
+        }
+        
+        const moduleUrl = pathToFileURL(resolvedPath).href
+        const module = await import(moduleUrl)
+        
+        return {
+          path: resolvedPath,
+          base: dirname(resolvedPath),
+          module: module.default ?? module
+        }
+      } catch (e) {
+        return {
+          path: id,
+          base: base || '.',
+          module: {
+            handler: () => {},
+            config: {}
+          }
+        }
+      }
+    }
+  }
+
+  // Load design system to validate the class
+  const designSystem = await __unstable__loadDesignSystem(cssContent, compileOptions)
+  
+  // Check if the class is valid
+  const MARKER_CLASSES = new Set(['group', 'peer'])
+  let isValidClass = false
+  
+  if (MARKER_CLASSES.has(className)) {
+    isValidClass = true
+  } else {
+    const parsed = designSystem.parseCandidate(className)
+    if (parsed !== null && parsed.length > 0) {
+      for (const candidateAst of parsed) {
+        const compiled = designSystem.compileAstNodes(candidateAst)
+        if (compiled.length > 0) {
+          isValidClass = true
+          break
+        }
+      }
+    }
+  }
+
+  // Now count occurrences in files
+  const sources = options.sources?.map(s => ({ ...s, negated: s.negated ?? false })) || 
+    (Array.isArray(filePaths) ? filePaths : [filePaths]).map(path => ({
+      base: '.',
+      pattern: resolve(path),
+      negated: false
+    }))
+
+  const scanner = new Scanner({ sources })
+  const files = scanner.files
+  
+  let totalCount = 0
+  const byFile: FileClassCount[] = []
+  
+  for (const file of files) {
+    try {
+      const content = readFileSync(file, 'utf-8')
+      const locations = findClassOccurrences(content, className)
+      
+      if (locations.length > 0) {
+        byFile.push({
+          file,
+          count: locations.length,
+          locations
+        })
+        totalCount += locations.length
+      }
+    } catch (e) {
+      // Skip files that can't be read
+      continue
+    }
+  }
+
+  return {
+    className,
+    totalCount,
+    fileCount: byFile.length,
+    isValidClass,
+    byFile
+  }
+}
+
+function findClassOccurrences(content: string, className: string): ClassLocation[] {
+  const locations: ClassLocation[] = []
+  const lines = content.split('\n')
+  
+  // Escape special regex characters in className
+  const escapedClassName = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  
+  // Pattern to match the class in various contexts
+  const patterns = [
+    // HTML class attribute
+    new RegExp(`\\bclass\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'g'),
+    // JSX className attribute
+    new RegExp(`\\bclassName\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'g'),
+    // JSX className with template literal
+    new RegExp(`\\bclassName\\s*=\\s*\{\`[^\`]*\\b${escapedClassName}\\b[^\`]*\`\}`, 'g'),
+    // Vue class binding
+    new RegExp(`(?::class|v-bind:class)\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'g'),
+    // Angular class binding
+    new RegExp(`\\[(?:class|ngClass)\\]\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'g'),
+    // Alpine.js class binding
+    new RegExp(`x-bind:class\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'g'),
+    // CSS @apply
+    new RegExp(`@apply\\s+[^;]*\\b${escapedClassName}\\b[^;]*;`, 'g'),
+    // cn() function and similar
+    new RegExp(`\\bcn\\s*\\([^)]*["'][^"']*\\b${escapedClassName}\\b[^"']*["'][^)]*\\)`, 'g')
+  ]
+  
+  lines.forEach((line, lineIndex) => {
+    patterns.forEach(pattern => {
+      let match
+      pattern.lastIndex = 0 // Reset regex state
+      while ((match = pattern.exec(line)) !== null) {
+        // Find the exact position of the class name within the match
+        const matchText = match[0]
+        const classIndex = matchText.search(new RegExp(`\\b${escapedClassName}\\b`))
+        if (classIndex !== -1) {
+          locations.push({
+            line: lineIndex + 1,
+            column: match.index + classIndex + 1,
+            context: line.trim()
+          })
+        }
+      }
+    })
+  })
+  
+  // Remove duplicates (same line and column)
+  const uniqueLocations = locations.filter((loc, index, self) =>
+    index === self.findIndex((l) => l.line === loc.line && l.column === loc.column)
+  )
+  
+  return uniqueLocations.sort((a, b) => a.line - b.line || a.column - b.column)
+}
+
 export async function scanFile(filePath: string, options?: ScanOptions): Promise<ScanResult> {
   return findInvalidTailwindClasses(filePath, options)
 }

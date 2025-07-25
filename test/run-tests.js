@@ -77,6 +77,7 @@ function runTest(test) {
     const args = [
       'node',
       cliPath,
+      'invalid-classes',
       '--json',
       '--path',
       test.cssPath

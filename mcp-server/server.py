@@ -33,11 +33,13 @@ def ensure_cli_built():
             "Please run 'pnpm run build' in the parent directory first."
         )
 
+
 async def run_cli_command(args: list[str]) -> dict[str, Any]:
     """Run the CLI command and parse JSON output"""
     ensure_cli_built()
     
-    cmd = ["node", str(CLI_PATH), "--json"] + args
+    # Don't automatically prepend --json, let each tool handle it
+    cmd = ["node", str(CLI_PATH)] + args
     
     try:
         process = await asyncio.create_subprocess_exec(
@@ -114,6 +116,29 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["css_path", "file"]
             }
+        ),
+        Tool(
+            name="count_classes",
+            description="Count occurrences of a specific Tailwind class across files",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "css_path": {
+                        "type": "string",
+                        "description": "Path to CSS file containing Tailwind imports"
+                    },
+                    "class_name": {
+                        "type": "string",
+                        "description": "The Tailwind class name to count"
+                    },
+                    "files": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Files or glob patterns to search in"
+                    }
+                },
+                "required": ["css_path", "class_name", "files"]
+            }
         )
     ]
 
@@ -126,8 +151,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextCon
         files = arguments["files"]
         no_filter = arguments.get("no_filter", False)
         
-        # Build CLI arguments - always use JSON output
-        cli_args = ["--json", "--path", css_path]
+        # Build CLI arguments for invalid-classes subcommand
+        cli_args = ["invalid-classes", "--path", css_path, "--json"]
         if no_filter:
             cli_args.append("--no-filter")
         cli_args.extend(files)
@@ -157,12 +182,41 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextCon
         file = arguments["file"]
         
         try:
-            result = await run_cli_command(["--json", "--path", css_path, file])
+            result = await run_cli_command(["invalid-classes", "--path", css_path, "--json", file])
             
             summary = result["summary"]
             by_file = result.get("byFile", [])
             
             # Always return the raw JSON result for programmatic use
+            return [TextContent(
+                type="text",
+                text=json.dumps(result, indent=2)
+            )]
+            
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"Error: {str(e)}"
+            )]
+    
+    elif name == "count_classes":
+        css_path = arguments["css_path"]
+        class_name = arguments["class_name"]
+        files = arguments["files"]
+        
+        # Build CLI arguments for count-classes subcommand
+        cli_args = ["count-classes", "--class", class_name, "--path", css_path, "--json"]
+        cli_args.extend(files)
+        
+        try:
+            result = await run_cli_command(cli_args)
+            
+            # Return the raw JSON result which includes:
+            # - className
+            # - totalOccurrences
+            # - fileCount
+            # - isValidClass
+            # - byFile array with detailed location information
             return [TextContent(
                 type="text",
                 text=json.dumps(result, indent=2)
