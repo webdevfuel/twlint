@@ -15,13 +15,13 @@ A powerful linter for Tailwind CSS that scans your codebase and identifies inval
 ## Installation
 
 ```bash
-npm install -g @webdevfuel/twlint
+npm install -g @webdevfuel/twlint@latest
 ```
 
 Or use it directly with npx:
 
 ```bash
-npx @webdevfuel/twlint --path ./src/styles.css ./src/**/*.tsx
+npx @webdevfuel/twlint@latest --path ./src/styles.css ./src/**/*.tsx
 ```
 
 ## CLI Usage
