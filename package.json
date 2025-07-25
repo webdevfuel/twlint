@@ -1,6 +1,6 @@
 {
   "name": "@webdevfuel/twlint",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lint and validate Tailwind CSS classes in your codebase",
   "keywords": [
     "tailwindcss",
