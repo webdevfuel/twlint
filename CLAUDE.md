@@ -2,55 +2,63 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Core Commands
+## Project Overview
 
-### Build
-- `pnpm build` - Build all packages (except playgrounds)
-- `pnpm build --filter=tailwindcss` - Build specific package
-- `pnpm dev` - Development mode with watch for all packages
+twlint is a linter for Tailwind CSS v4 that validates CSS classes in codebases. It identifies invalid/non-existent Tailwind classes and provides detailed error reporting.
 
-### Testing
-- `pnpm test` - Run all tests (Rust + JavaScript)
-- `pnpm test -- path/to/test.test.ts` - Run specific test file
-- `pnpm tdd` - Test-driven development mode with Vitest watch
-- `pnpm test:integrations` - Run integration tests
-- `pnpm test:ui` - Run Playwright UI tests
-- `cargo test` - Run Rust tests only
+## Essential Commands
 
-### Linting & Formatting
-- `pnpm lint` - Check formatting and run linting
-- `pnpm format` - Auto-format code with Prettier
+- **Install dependencies**: `npm install`
+- **Build**: `npm run build` - Compiles TypeScript to JavaScript
+- **Development**: `npm run dev` - Runs TypeScript compiler in watch mode
+- **Test**: `npm test` - Runs the custom test suite
+- **Run locally**: `./bin/twlint.js` (after building)
 
 ## Architecture Overview
 
-This is the Tailwind CSS v4 monorepo with a hybrid TypeScript/Rust architecture:
+### Core Components
 
-### Core Structure
-- **Rust Oxide Engine** (`crates/oxide/`) - High-performance scanning and parsing of CSS candidates
-- **TypeScript Packages** (`packages/`) - Various integrations and APIs
-- **Integration Tests** (`integrations/`) - Test suites for different build tools
+1. **CLI Layer** (`src/cli.ts`): 
+   - Entry point for the command-line tool
+   - Two main commands: `invalid-classes` and `count-classes`
+   - Handles argument parsing and output formatting (human/JSON)
 
-### Key Packages
-- `packages/tailwindcss/` - Core v4 implementation that orchestrates the Rust engine
-- `packages/@tailwindcss/oxide/` - Node.js bindings for the Rust scanner
-- `packages/@tailwindcss/cli/` - Command-line interface
-- `packages/@tailwindcss/postcss/` - PostCSS plugin integration
-- `packages/@tailwindcss/vite/` - Vite plugin
+2. **Scanner Engine** (`src/index.ts`):
+   - Loads Tailwind v4's design system using `@tailwindcss/oxide`
+   - Validates classes against Tailwind's built-in utilities
+   - Tracks results per file with class occurrences and locations
 
-### Important Concepts
-1. **Candidate Extraction**: The Rust oxide engine scans source files for potential Tailwind classes
-2. **AST-based CSS Generation**: CSS is generated through PostCSS AST manipulation
-3. **Source Maps**: Full support for debugging generated CSS
-4. **Multi-platform**: Native bindings for Darwin, Linux, Windows, and WASM
+3. **Context-Aware Extraction** (`src/context-aware-scanner.ts`):
+   - Smart class extraction from various contexts:
+     - HTML `class` attributes
+     - React `className` props (including `cn()` function calls)
+     - Vue.js (`:class`, `v-bind:class`)
+     - Angular (`[ngClass]`)
+     - Alpine.js (`x-bind:class`)
+     - CSS `@apply` directives
+   - Uses TypeScript AST parsing for accurate extraction from JSX/TSX
 
-### Development Workflow
-1. Changes to scanning/parsing logic → Edit Rust code in `crates/oxide/`
-2. Changes to CSS generation → Edit TypeScript in `packages/tailwindcss/src/`
-3. Adding new utilities → Update `packages/tailwindcss/src/utilities.ts`
-4. Plugin development → Work in respective package directory
+4. **MCP Server** (`mcp-server/`):
+   - Python-based Model Context Protocol server
+   - Enables AI assistants to use twlint functionality
 
-### Testing Approach
-- Unit tests live alongside source files as `*.test.ts`
-- Integration tests in `integrations/` directory
-- Snapshot tests for CSS output validation
-- Use `pnpm test -- --watch` for TDD workflow
+### Key Implementation Details
+
+- **Tailwind v4 Integration**: Uses `@tailwindcss/oxide` directly, ensuring compatibility with latest Tailwind features
+- **Performance**: Processes files in parallel, uses efficient glob patterns
+- **Context Filtering**: By default, only extracts classes from relevant contexts to minimize false positives
+- **TypeScript**: Strict mode enabled, full type safety throughout
+
+## Testing
+
+Tests are located in `test/` and use a custom runner:
+- Run all tests: `npm test`
+- Test fixtures in `test/fixtures/` cover various scenarios
+- Tests validate both the scanning logic and CLI output format
+
+## Development Tips
+
+1. When modifying class extraction logic, update `src/context-aware-scanner.ts`
+2. For new Tailwind v4 features, ensure compatibility with the Oxide scanner API
+3. Add test fixtures for new functionality in `test/fixtures/`
+4. The project uses TypeScript strict mode - ensure all code passes type checking
